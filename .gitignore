@@ -1,0 +1,69 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/dist
+/.turbo
+/.next
+/out
+/build
+*.log
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+
+# Ignore common binary/installer artifacts accidentally copied into repo
+*.exe
+*.dll
+*.hyb
+*.iso
+*.dmg
+*.pkg
+*.msi
+*.7z
+*.zip
+*.rar
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
