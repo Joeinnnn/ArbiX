@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+
+  <img src="./public/arbix-logo.png" alt="ArbiX" width="120" />
+
+  <h1>ArbiX</h1>
+  <p><strong>Powered by Solana</strong> for lightning-fast, low-fee trades ⚡</p>
+
+  <a href="https://github.com/Joeinnnn/ArbiX">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-Repo-181717?logo=github&logoColor=white" />
+  </a>
+
+</div>
+
+---
+
+ArbiX is a modern trading interface built with Next.js and TypeScript, designed to leverage the Solana blockchain’s high throughput and low fees. The goal is to deliver a smooth, real‑time trading experience with fast confirmations and a clean UI.
+
+The website’s GitHub button links here: https://github.com/Joeinnnn/ArbiX
+
+## Features
+
+- High-speed order interactions on Solana
+- Low transaction fees compared to legacy chains
+- Clean, responsive UI built with Next.js App Router
+- TypeScript-first codebase for reliability
+- Ready for deployment on Vercel
+
+## Tech Stack
+
+- Next.js (App Router)
+- React + TypeScript
+- Solana (Powered by Solana infrastructure)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ and npm (or yarn/pnpm/bun)
+- A Solana RPC endpoint and a wallet for on-chain actions
+
+### Installation
+
+```bash
+npm install
+```
+
+### Environment Variables
+
+Create a `.env.local` in the project root if you plan to connect to Solana endpoints and configure links.
+
+Example (adjust to your setup):
+
+```bash
+NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta
+NEXT_PUBLIC_SOLANA_RPC=https://api.mainnet-beta.solana.com
+NEXT_PUBLIC_GITHUB_REPO=https://github.com/Joeinnnn/ArbiX
+```
+
+### Run the Dev Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/app` — Next.js App Router pages, layout, and styles
+- `src/components` — Reusable UI components
+- `public` — Static assets (logos, icons)
+- `bot` — Project bot/automation scripts (if applicable)
 
-## Learn More
+## Deployment
 
-To learn more about Next.js, take a look at the following resources:
+ArbiX can be deployed seamlessly on Vercel. Refer to Vercel’s Next.js deployment guide for best practices.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Pull requests and issues are welcome. If you’d like to discuss a major change, please open an issue first to talk about what you’d like to propose.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+No license has been specified yet. All rights reserved by the project owner.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+Built with ❤️ and powered by Solana for next‑gen trading.

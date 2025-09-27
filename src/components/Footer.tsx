@@ -11,7 +11,7 @@ export function Footer() {
           <Link href="https://t.me/YOUR_BOT_USERNAME" target="_blank" className="hover:underline">
             Telegram
           </Link>
-          <Link href="https://github.com/" target="_blank" className="hover:underline">
+          <Link href="https://github.com/Joeinnnn/ArbiX" target="_blank" className="hover:underline">
             GitHub
           </Link>
           <Link href="#privacy" className="hover:underline">
