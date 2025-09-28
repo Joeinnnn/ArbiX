@@ -8,7 +8,7 @@ export function Footer() {
           © {new Date().getFullYear()} ArbiX. All rights reserved.
         </p>
         <div className="flex items-center gap-4">
-          <Link href="https://t.me/YOUR_BOT_USERNAME" target="_blank" className="hover:underline">
+          <Link href="https://arbi-x-lake.vercel.app/" target="_blank" className="hover:underline">
             Telegram
           </Link>
           <Link href="https://github.com/Joeinnnn/ArbiX" target="_blank" className="hover:underline">

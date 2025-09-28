@@ -17,11 +17,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ArbiX – Telegram Memecoin Trading Bot",
   description: "Trade memecoins from Telegram with speed, safety, and automation.",
-  metadataBase: new URL("https://arbix.example"),
+  metadataBase: new URL("https://arbi-x-lake.vercel.app/"),
   openGraph: {
     title: "ArbiX – Telegram Memecoin Trading Bot",
     description: "Trade memecoins from Telegram with speed, safety, and automation.",
-    url: "https://arbix.example",
+    url: "https://arbi-x-lake.vercel.app/",
     siteName: "ArbiX",
     type: "website"
   },

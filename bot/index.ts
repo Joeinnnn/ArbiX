@@ -8,6 +8,7 @@ import bs58 from 'bs58';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const supportAdminChatId = process.env.SUPPORT_ADMIN_CHAT_ID ? Number(process.env.SUPPORT_ADMIN_CHAT_ID) : undefined;
+const publicBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'ArbiXSolanabot';
 if (!token) {
   console.error('Missing TELEGRAM_BOT_TOKEN in environment.');
   process.exit(1);
@@ -35,6 +36,10 @@ const inlineMenu = Markup.inlineKeyboard([
     Markup.button.callback('👛 Wallet', 'wallet'),
     Markup.button.callback('💸 Withdraw', 'withdraw'),
     Markup.button.callback('🛟 Support', 'support')
+  ],
+  [
+    Markup.button.callback('👥 Refer', 'referrals'),
+    Markup.button.callback('🎁 Rakeback', 'rakeback')
   ],
   [
     Markup.button.callback('🔄 Refresh', 'refresh')
@@ -78,8 +83,8 @@ async function sendWelcome(ctx: any) {
     `→ ${pubkey}`,
     '',
     'Resources:',
-    '• Website: https://arbix.example',
-    '• Docs: https://arbix.example/docs',
+    '• Website: https://arbi-x-lake.vercel.app/',
+    '• Docs: https://github.com/Joeinnnn/ArbiX',
     '• Support: https://t.me/ArbiXSolanabot?start=support',
     '',
     'Use the menu below to get started.'
@@ -96,8 +101,48 @@ async function sendWelcome(ctx: any) {
   await sendCard(ctx, caption, inlineMenu);
 }
 
-bot.start(async (ctx) => { await sendWelcome(ctx); });
-bot.command('start', async (ctx) => { await sendWelcome(ctx); });
+// --- Referral tracking ---
+type ReferralStats = { code: string; inviterId?: number; referredCount: number; rakeback: number; totalEarned: number };
+const userReferral = new Map<number, ReferralStats>();
+const codeToUserId = new Map<string, number>();
+
+function getReferral(userId: number): ReferralStats {
+  let rs = userReferral.get(userId);
+  if (!rs) {
+    const code = `r${userId.toString(36)}`;
+    rs = { code, referredCount: 0, rakeback: 0, totalEarned: 0 };
+    userReferral.set(userId, rs);
+    codeToUserId.set(code, userId);
+  }
+  return rs;
+}
+
+function handleStartReferral(userId: number, payload?: string) {
+  if (!payload) return;
+  if (payload === 'support') return; // reserved
+  const inviterId = codeToUserId.get(payload);
+  if (!inviterId || inviterId === userId) return;
+  const newUserStats = getReferral(userId);
+  if (newUserStats.inviterId) return; // already attributed
+  newUserStats.inviterId = inviterId;
+  userReferral.set(userId, newUserStats);
+  const invStats = getReferral(inviterId);
+  invStats.referredCount += 1;
+  userReferral.set(inviterId, invStats);
+}
+
+bot.start(async (ctx) => {
+  // Deep link payload becomes startPayload in Telegraf
+  const payload = (ctx as any).startPayload as string | undefined;
+  if (ctx.from?.id) handleStartReferral(ctx.from.id, payload);
+  await sendWelcome(ctx);
+});
+bot.command('start', async (ctx) => {
+  const parts = (ctx.message as any)?.text?.split?.(' ');
+  const payload = parts && parts.length > 1 ? parts.slice(1).join(' ') : undefined;
+  if (ctx.from?.id) handleStartReferral(ctx.from.id, payload);
+  await sendWelcome(ctx);
+});
 
 // --- Submenu keyboards ---
 function tradeKeyboard() {
@@ -138,6 +183,23 @@ function settingsKeyboard() {
 function withdrawKeyboard() {
   return Markup.inlineKeyboard([
     [Markup.button.callback('➡️ To Main Wallet', 'wd_main'), Markup.button.callback('✉️ Custom Address', 'wd_custom')],
+    [Markup.button.callback('⬅️ Back', 'back_home')]
+  ]);
+}
+
+function referralsKeyboard(userId: number) {
+  const rs = getReferral(userId);
+  const link = `https://t.me/${publicBotUsername}?start=${rs.code}`;
+  return Markup.inlineKeyboard([
+    [Markup.button.url('🔗 Invite Link', link)],
+    [Markup.button.callback('📈 My Stats', 'ref_my_stats')],
+    [Markup.button.callback('⬅️ Back', 'back_home')]
+  ]);
+}
+
+function rakebackKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('💵 Claim', 'rake_claim')],
     [Markup.button.callback('⬅️ Back', 'back_home')]
   ]);
 }
@@ -191,6 +253,33 @@ bot.action('trade', async (ctx) => { await ctx.answerCbQuery(); await sendCard(c
 bot.action('sniper', async (ctx) => { await ctx.answerCbQuery(); await showSniper(ctx); });
 bot.action('automations', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Automations', automationsKeyboard()); });
 bot.action('portfolio', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Portfolio', portfolioKeyboard()); });
+bot.action('referrals', async (ctx) => {
+  await ctx.answerCbQuery();
+  const rs = getReferral(ctx.from!.id);
+  const link = `https://t.me/${publicBotUsername}?start=${rs.code}`;
+  const text = [
+    '👥 Referral Program',
+    '',
+    `Invite link: ${link}`,
+    `Referred users: ${rs.referredCount}`,
+    `Rakeback: ${rs.rakeback} SOL`,
+    `Total earned: ${rs.totalEarned} SOL`,
+  ].join('\n');
+  await sendCard(ctx, text, referralsKeyboard(ctx.from!.id));
+});
+bot.action('rakeback', async (ctx) => {
+  await ctx.answerCbQuery();
+  const rs = getReferral(ctx.from!.id);
+  const text = [
+    '🎁 Rakeback',
+    '',
+    `Current balance: ${rs.rakeback} SOL`,
+    `Total earned: ${rs.totalEarned} SOL`,
+    '',
+    'Earn rakeback when your referrals trade. Coming soon.'
+  ].join('\n');
+  await sendCard(ctx, text, rakebackKeyboard());
+});
 bot.action('wallet', async (ctx) => {
   await ctx.answerCbQuery();
   const list = userWallets.get(ctx.from!.id) ?? [];
@@ -416,6 +505,54 @@ bot.action('support_ticket', async (ctx) => {
   (ctx as any).state = (ctx as any).state || {};
   (ctx as any).state.openTicket = true;
   await ctx.reply('Describe your issue. We will forward it to support. (/cancel to abort)');
+});
+
+// Referral submenu actions
+bot.action('ref_my_stats', async (ctx) => {
+  await ctx.answerCbQuery();
+  const rs = getReferral(ctx.from!.id);
+  const link = `https://t.me/${publicBotUsername}?start=${rs.code}`;
+  const text = [
+    '📈 My Referral Stats',
+    '',
+    `Invite link: ${link}`,
+    `Referred users: ${rs.referredCount}`,
+    `Rakeback: ${rs.rakeback} SOL`,
+    `Total earned: ${rs.totalEarned} SOL`,
+  ].join('\n');
+  await sendCard(ctx, text, referralsKeyboard(ctx.from!.id));
+});
+
+// Rakeback claim (stub)
+bot.action('rake_claim', async (ctx) => {
+  await ctx.answerCbQuery();
+  const rs = getReferral(ctx.from!.id);
+  if (rs.rakeback <= 0) {
+    await ctx.reply('No rakeback to claim yet.');
+    return;
+  }
+  // Placeholder: handle on-chain payout later
+  rs.totalEarned += rs.rakeback;
+  rs.rakeback = 0;
+  userReferral.set(ctx.from!.id, rs);
+  await ctx.reply('Rakeback claimed.');
+});
+
+// Admin helper to credit rakeback manually: /rake_credit <userId> <amount>
+bot.command('rake_credit', async (ctx) => {
+  if (!supportAdminChatId || ctx.from?.id !== supportAdminChatId) {
+    return ctx.reply('Unauthorized.');
+  }
+  const text = (ctx.message as any)?.text || '';
+  const parts = text.trim().split(/\s+/);
+  if (parts.length < 3) return ctx.reply('Usage: /rake_credit <userId> <amountSOL>');
+  const uid = Number(parts[1]);
+  const amt = Number(parts[2]);
+  if (!Number.isFinite(uid) || !Number.isFinite(amt) || amt <= 0) return ctx.reply('Invalid arguments.');
+  const rs = getReferral(uid);
+  rs.rakeback += amt;
+  userReferral.set(uid, rs);
+  await ctx.reply(`Credited ${amt} SOL rakeback to user ${uid}.`);
 });
 
 bot.catch((err, ctx) => {
