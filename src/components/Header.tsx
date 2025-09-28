@@ -40,7 +40,7 @@ export function Header() {
           <Link
             href="https://t.me/ArbiXSolanabot"
             target="_blank"
-            className="inline-flex items-center justify-center h-9 px-4 rounded-md bg-brand text-black text-sm font-medium hover:opacity-90"
+            className="inline-flex items-center justify-center h-9 px-4 rounded-md bg-brand text-black text-sm font-medium hover:opacity-90 glow-brand border-neon border-neon-animated border-neon-glow"
           >
             Start on Telegram
           </Link>

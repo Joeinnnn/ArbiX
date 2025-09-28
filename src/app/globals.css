@@ -5,6 +5,7 @@
   --foreground: #e6f1ff;
   --muted: #9fb3c8;
   --brand: #1f96ff;
+  --glow: 0 0 40px rgba(31,150,255,0.35);
 }
 
 @theme inline {
@@ -20,11 +21,12 @@ html, body { height: 100%; }
 
 body {
   background:
-    radial-gradient(1200px 800px at 70% -10%, rgba(31,150,255,0.12), transparent 60%),
-    radial-gradient(900px 600px at 10% 20%, rgba(13,110,253,0.14), transparent 60%),
+    radial-gradient(1200px 800px at 70% -10%, rgba(31,150,255,0.16), transparent 60%),
+    radial-gradient(900px 600px at 10% 20%, rgba(13,110,253,0.18), transparent 60%),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  position: relative;
 }
 
 .card {
@@ -33,3 +35,180 @@ body {
 .card:hover { @apply bg-white/10 -translate-y-0.5; }
 
 html { scroll-behavior: smooth; }
+
+/* Tech: subtle grid overlay (disabled by default; enable by adding bg-tech-grid on a container) */
+.bg-tech-grid {
+  position: relative;
+}
+.bg-tech-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Tech: glow utility */
+.glow-brand { box-shadow: var(--glow); }
+
+/* Gradient text utility */
+.text-gradient {
+  background: linear-gradient(90deg, #7cc6ff 0%, #1f96ff 40%, #8ad2ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Neon gradient border utilities */
+.border-neon {
+  position: relative;
+}
+.border-neon::before {
+  content: "";
+  position: absolute; inset: -1px; border-radius: inherit; padding: 1px;
+  background: linear-gradient(135deg, rgba(124,198,255,0.7), rgba(31,150,255,0.9), rgba(124,198,255,0.7));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none;
+}
+.border-neon-glow { box-shadow: 0 0 20px rgba(31,150,255,0.35), inset 0 0 12px rgba(31,150,255,0.15); }
+.border-neon-animated::before { animation: hueShift 8s linear infinite; }
+@keyframes hueShift { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+
+/* Animated background accents */
+@keyframes blobMoveA {
+  0%   { transform: translate3d(-10%, -20%, 0) scale(1); }
+  50%  { transform: translate3d(5%, 10%, 0) scale(1.15); }
+  100% { transform: translate3d(-5%, -15%, 0) scale(1); }
+}
+@keyframes blobMoveB {
+  0%   { transform: translate3d(20%, -30%, 0) scale(1.1); }
+  50%  { transform: translate3d(-10%, 15%, 0) scale(0.95); }
+  100% { transform: translate3d(15%, -25%, 0) scale(1.1); }
+}
+@keyframes scan {
+  0%   { background-position: 0 -200%; }
+  100% { background-position: 0 200%; }
+}
+
+.bg-animated { position: relative; overflow: hidden; }
+.bg-animated::before,
+.bg-animated::after {
+  content: "";
+  position: absolute;
+  width: 60vmin; height: 60vmin;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.35;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.bg-animated::before {
+  left: -10%; top: -20%;
+  background: radial-gradient(circle at 50% 50%, rgba(124,198,255,0.35), transparent 60%);
+  animation: blobMoveA 22s ease-in-out infinite alternate;
+}
+.bg-animated::after {
+  right: -10%; top: -15%;
+  background: radial-gradient(circle at 50% 50%, rgba(31,150,255,0.45), transparent 55%);
+  animation: blobMoveB 26s ease-in-out infinite alternate;
+}
+
+/* Optional scanning lines overlay */
+.scan-overlay {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.12; mix-blend-mode: overlay;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.12) 0px,
+    rgba(255,255,255,0.12) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+  animation: scan 8s linear infinite;
+}
+
+/* Diagonal tech lines */
+@keyframes move45 { from { background-position: 0 0; } to { background-position: 1000px 1000px; } }
+.lines-45 {
+  position: absolute; inset: -50%; pointer-events: none; opacity: 0.16;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(124,198,255,0.10) 0px,
+    rgba(124,198,255,0.10) 2px,
+    transparent 2px,
+    transparent 60px
+  );
+  animation: move45 28s linear infinite;
+}
+@keyframes move135 { from { background-position: 0 0; } to { background-position: -1000px 1000px; } }
+.lines-135 {
+  position: absolute; inset: -50%; pointer-events: none; opacity: 0.10;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(31,150,255,0.10) 0px,
+    rgba(31,150,255,0.10) 2px,
+    transparent 2px,
+    transparent 60px
+  );
+  animation: move135 36s linear infinite;
+}
+
+/* Global tech background overlays */
+@keyframes spin360 { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+html::before {
+  content: "";
+  position: fixed;
+  inset: 50% auto auto 50%;
+  width: 120vmax; height: 120vmax;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(from 0deg, rgba(124,198,255,0.06), rgba(31,150,255,0.08), rgba(124,198,255,0.06));
+  filter: blur(60px);
+  opacity: 0.6;
+  z-index: 0;
+  pointer-events: none;
+  animation: spin360 120s linear infinite;
+}
+html::after {
+  content: "";
+  position: fixed; inset: 0; pointer-events: none; opacity: 0.12; mix-blend-mode: overlay;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.10) 0px,
+    rgba(255,255,255,0.10) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+  animation: scan 8s linear infinite;
+  z-index: 0;
+}
+body::before,
+body::after {
+  content: "";
+  position: fixed; inset: -25%; pointer-events: none; z-index: 0;
+}
+body::before {
+  opacity: 0.18;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(124,198,255,0.10) 0px,
+    rgba(124,198,255,0.10) 2px,
+    transparent 2px,
+    transparent 60px
+  );
+  animation: move45 28s linear infinite;
+}
+body::after {
+  opacity: 0.12;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(31,150,255,0.10) 0px,
+    rgba(31,150,255,0.10) 2px,
+    transparent 2px,
+    transparent 60px
+  );
+  animation: move135 36s linear infinite;
+}

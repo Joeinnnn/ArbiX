@@ -7,6 +7,7 @@ import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
+const supportAdminChatId = process.env.SUPPORT_ADMIN_CHAT_ID ? Number(process.env.SUPPORT_ADMIN_CHAT_ID) : undefined;
 if (!token) {
   console.error('Missing TELEGRAM_BOT_TOKEN in environment.');
   process.exit(1);
@@ -98,11 +99,98 @@ async function sendWelcome(ctx: any) {
 bot.start(async (ctx) => { await sendWelcome(ctx); });
 bot.command('start', async (ctx) => { await sendWelcome(ctx); });
 
-// Menu handlers (stubs) for inline keyboard
-bot.action('trade', async (ctx) => { await ctx.answerCbQuery(); await ctx.reply('Trade: paste a token address to begin.', inlineMenu); });
-bot.action('sniper', async (ctx) => { await ctx.answerCbQuery(); await ctx.reply('Sniper: configure alerts and auto-buys.', inlineMenu); });
-bot.action('automations', async (ctx) => { await ctx.answerCbQuery(); await ctx.reply('Automations: DCA, TP/SL, trailing stops.', inlineMenu); });
-bot.action('portfolio', async (ctx) => { await ctx.answerCbQuery(); await ctx.reply('Portfolio: balances and PnL coming soon.', inlineMenu); });
+// --- Submenu keyboards ---
+function tradeKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('🪙 Paste Token', 'trade_paste')],
+    [Markup.button.callback('📉 Set Slippage', 'trade_set_slip')],
+    [Markup.button.callback('⬅️ Back', 'back_home')]
+  ]);
+}
+function automationsKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('📈 DCA', 'auto_dca'), Markup.button.callback('🎯 TP / SL', 'auto_tp_sl')],
+    [Markup.button.callback('📉 Trailing Stop', 'auto_trailing')],
+    [Markup.button.callback('⬅️ Back', 'back_home')]
+  ]);
+}
+function limitOrdersKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('🛒 Create Buy', 'limit_create_buy'), Markup.button.callback('💰 Create Sell', 'limit_create_sell')],
+    [Markup.button.callback('🗂 View Orders', 'limit_view')],
+    [Markup.button.callback('⬅️ Back', 'back_home')]
+  ]);
+}
+function portfolioKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('💼 Balances', 'pf_balances'), Markup.button.callback('📊 PnL', 'pf_pnl')],
+    [Markup.button.callback('🧾 Recent Tx', 'pf_recent')],
+    [Markup.button.callback('⬅️ Back', 'back_home')]
+  ]);
+}
+function settingsKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('⚡ Gas Presets', 'set_gas'), Markup.button.callback('📉 Slippage', 'set_slip')],
+    [Markup.button.callback('👛 Wallet', 'wallet')],
+    [Markup.button.callback('⬅️ Back', 'back_home')]
+  ]);
+}
+function withdrawKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('➡️ To Main Wallet', 'wd_main'), Markup.button.callback('✉️ Custom Address', 'wd_custom')],
+    [Markup.button.callback('⬅️ Back', 'back_home')]
+  ]);
+}
+
+// --- Sniper state (in-memory, per user) ---
+type SniperConfig = {
+  tokenMint: string | null; // base58 token address to buy
+  amountSol: number;        // amount in SOL to spend
+  slippageBps: number;      // 1% = 100 bps
+  autoBuy: boolean;         // whether to auto-execute when condition met
+};
+const defaultSniper: SniperConfig = { tokenMint: null, amountSol: 0.1, slippageBps: 150, autoBuy: false };
+const userSniper = new Map<number, SniperConfig>();
+
+function getSniper(userId: number): SniperConfig {
+  const s = userSniper.get(userId) ?? { ...defaultSniper };
+  userSniper.set(userId, s);
+  return s;
+}
+
+function sniperKeyboard(s: SniperConfig) {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(`🎯 Token ${s.tokenMint ? '✅' : '⚪'}`, 'sniper_set_token')],
+    [Markup.button.callback(`💰 Amount: ${s.amountSol} SOL`, 'sniper_set_amount')],
+    [Markup.button.callback(`📉 Slippage: ${(s.slippageBps/100).toFixed(2)}%`, 'sniper_set_slip')],
+    [Markup.button.callback(`${s.autoBuy ? '🟢 Auto-Buy ON' : '⚪ Auto-Buy OFF'}`, 'sniper_toggle_auto')],
+    [Markup.button.callback('🚀 Snipe Now', 'sniper_now')],
+    [Markup.button.callback('⬅️ Back', 'sniper_back')]
+  ]);
+}
+
+async function showSniper(ctx: any) {
+  const s = getSniper(ctx.from!.id);
+  const text = [
+    '🎯 Sniper',
+    '',
+    `Token: ${s.tokenMint ?? '—'}`,
+    `Amount: ${s.amountSol} SOL`,
+    `Slippage: ${(s.slippageBps/100).toFixed(2)}%`,
+    `Auto-Buy: ${s.autoBuy ? 'ON' : 'OFF'}`,
+    '',
+    'Tips:',
+    '• Paste a token mint address to set token.',
+    '• You can also tap buttons to adjust settings.',
+  ].join('\n');
+  await sendCard(ctx, text, sniperKeyboard(s));
+}
+
+// Menu handlers (submenus)
+bot.action('trade', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Trade', tradeKeyboard()); });
+bot.action('sniper', async (ctx) => { await ctx.answerCbQuery(); await showSniper(ctx); });
+bot.action('automations', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Automations', automationsKeyboard()); });
+bot.action('portfolio', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Portfolio', portfolioKeyboard()); });
 bot.action('wallet', async (ctx) => {
   await ctx.answerCbQuery();
   const list = userWallets.get(ctx.from!.id) ?? [];
@@ -167,6 +255,65 @@ bot.hears(/.*/, async (ctx, next) => {
     s.expectingRename = false;
     return;
   }
+  if (s?.openTicket) {
+    const text = (ctx.message as any)?.text?.trim();
+    if (text?.toLowerCase?.() === '/cancel') {
+      s.openTicket = false;
+      await ctx.reply('Ticket creation cancelled.');
+      return;
+    }
+    if (text && supportAdminChatId) {
+      const user = ctx.from!;
+      const header = `📨 Support Ticket from @${user.username ?? user.id}\nUser ID: ${user.id}`;
+      await ctx.telegram.sendMessage(supportAdminChatId, [header, '', text].join('\n'));
+      await ctx.reply('Thanks! Your message has been sent to support. We will get back to you.');
+    } else if (text) {
+      await ctx.reply('Support is currently unavailable. Please DM the support bot.');
+    }
+    s.openTicket = false;
+    return;
+  }
+  // Sniper: set token/amount/slippage from free-text prompts
+  const text = (ctx.message as any)?.text?.trim();
+  if (typeof text === 'string' && text.length > 0) {
+    if (s?.expectingAmount) {
+      const v = Number(text);
+      if (!Number.isFinite(v) || v <= 0) {
+        await ctx.reply('Please send a valid positive number for amount in SOL.');
+      } else {
+        const sc = getSniper(ctx.from!.id);
+        sc.amountSol = Number(v.toFixed(6));
+        userSniper.set(ctx.from!.id, sc);
+        await ctx.reply('Amount updated.');
+        await showSniper(ctx);
+      }
+      s.expectingAmount = false;
+      return;
+    }
+    if (s?.expectingSlip) {
+      const v = Number(text);
+      if (!Number.isFinite(v) || v <= 0 || v > 50) {
+        await ctx.reply('Please send a slippage between 0 and 50 (percent).');
+      } else {
+        const sc = getSniper(ctx.from!.id);
+        sc.slippageBps = Math.round(v * 100); // convert % → bps
+        userSniper.set(ctx.from!.id, sc);
+        await ctx.reply('Slippage updated.');
+        await showSniper(ctx);
+      }
+      s.expectingSlip = false;
+      return;
+    }
+    // naive base58-ish check for token mint
+    if (text.length >= 32 && text.length <= 60 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(text)) {
+      const sc = getSniper(ctx.from!.id);
+      sc.tokenMint = text;
+      userSniper.set(ctx.from!.id, sc);
+      await ctx.reply('Token set for sniper.');
+      await showSniper(ctx);
+      return;
+    }
+  }
   // Allow command handlers like /menu to run
   if ((ctx.message as any)?.text?.startsWith?.('/')) return next();
   return next();
@@ -189,11 +336,87 @@ bot.action('wallet_close', async (ctx) => {
   try { await ctx.deleteMessage(); } catch {}
   await sendWelcome(ctx);
 });
-bot.action('limit_orders', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Limit Orders: schedule price-triggered trades.', inlineMenu); });
-bot.action('settings', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Settings: gas presets, slippage, wallet.', inlineMenu); });
-bot.action('support', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Support: DM @your_support or open a ticket.', inlineMenu); });
+bot.action('limit_orders', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Limit Orders', limitOrdersKeyboard()); });
+bot.action('settings', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Settings', settingsKeyboard()); });
+bot.action('support', async (ctx) => {
+  await ctx.answerCbQuery();
+  const kb = Markup.inlineKeyboard([
+    [Markup.button.url('💬 DM Support', 'https://t.me/ArbiXSolanabot')],
+    [Markup.button.callback('📝 Open Ticket', 'support_ticket')],
+    [Markup.button.callback('❓ FAQ', 'support_faq')],
+    [Markup.button.callback('⬅️ Back', 'support_back')]
+  ]);
+  await sendCard(ctx, 'Support Center', kb);
+});
 bot.action('withdraw', async (ctx) => { await ctx.answerCbQuery(); await sendCard(ctx, 'Withdraw: move funds to your main wallet.', inlineMenu); });
+bot.action('back_home', async (ctx) => { await ctx.answerCbQuery(); await sendWelcome(ctx); });
 bot.action('refresh', async (ctx) => { await ctx.answerCbQuery('Refreshed'); await sendWelcome(ctx); });
+
+// --- Sniper action handlers ---
+bot.action('sniper_set_token', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.reply('Paste the SPL token mint address to snipe.');
+});
+bot.action('sniper_set_amount', async (ctx) => {
+  await ctx.answerCbQuery();
+  (ctx as any).state = (ctx as any).state || {};
+  (ctx as any).state.expectingAmount = true;
+  await ctx.reply('Send the amount in SOL (e.g., 0.1).');
+});
+bot.action('sniper_set_slip', async (ctx) => {
+  await ctx.answerCbQuery();
+  (ctx as any).state = (ctx as any).state || {};
+  (ctx as any).state.expectingSlip = true;
+  await ctx.reply('Send slippage in percent (e.g., 1.5).');
+});
+bot.action('sniper_toggle_auto', async (ctx) => {
+  await ctx.answerCbQuery();
+  const s = getSniper(ctx.from!.id);
+  s.autoBuy = !s.autoBuy;
+  userSniper.set(ctx.from!.id, s);
+  await showSniper(ctx);
+});
+bot.action('sniper_now', async (ctx) => {
+  await ctx.answerCbQuery();
+  const s = getSniper(ctx.from!.id);
+  if (!s.tokenMint) {
+    await ctx.reply('Set a token mint first.');
+    return;
+  }
+  await ctx.reply('Preparing snipe (quote → swap) ...');
+  // Placeholder: actual on-chain swap will be implemented next
+  await ctx.reply('Snipe simulated. On-chain execution coming soon.');
+  await showSniper(ctx);
+});
+bot.action('sniper_back', async (ctx) => {
+  await ctx.answerCbQuery();
+  await sendWelcome(ctx);
+});
+
+// --- Support flows ---
+bot.action('support_back', async (ctx) => { await ctx.answerCbQuery(); await sendWelcome(ctx); });
+bot.action('support_faq', async (ctx) => {
+  await ctx.answerCbQuery();
+  const faq = [
+    '❓ FAQ',
+    '',
+    'Q: Is ArbiX self-custodial?',
+    'A: Yes, your keys stay in your device/session. Export any time.',
+    '',
+    'Q: What networks are supported?',
+    'A: Solana for now.',
+    '',
+    'Q: How do I report a bug?',
+    'A: Open a ticket in Support or DM the support bot.'
+  ].join('\n');
+  await sendCard(ctx, faq, Markup.inlineKeyboard([[Markup.button.callback('⬅️ Back', 'support')]]));
+});
+bot.action('support_ticket', async (ctx) => {
+  await ctx.answerCbQuery();
+  (ctx as any).state = (ctx as any).state || {};
+  (ctx as any).state.openTicket = true;
+  await ctx.reply('Describe your issue. We will forward it to support. (/cancel to abort)');
+});
 
 bot.catch((err, ctx) => {
   console.error('Bot error', err);
@@ -225,9 +448,9 @@ bot.command('menu', async (ctx) => { await sendWelcome(ctx); });
 bot.command('hide', async (ctx) => {
   await ctx.reply('Keyboard hidden.', Markup.removeKeyboard());
 });
-bot.command('trade', async (ctx) => sendCard(ctx, 'Trade: paste a token address to begin.', inlineMenu));
-bot.command('sniper', async (ctx) => sendCard(ctx, 'Sniper: configure alerts and auto-buys.', inlineMenu));
-bot.command('portfolio', async (ctx) => sendCard(ctx, 'Portfolio: balances and PnL coming soon.', inlineMenu));
+bot.command('trade', async (ctx) => sendCard(ctx, 'Trade', tradeKeyboard()));
+bot.command('sniper', async (ctx) => showSniper(ctx));
+bot.command('portfolio', async (ctx) => sendCard(ctx, 'Portfolio', portfolioKeyboard()));
 bot.command('wallet', async (ctx) => {
   const list = getUserWallets(ctx.from!.id);
   const lines = list.map((w) => `→ ${w.name} - ${w.keypair.publicKey.toBase58()}`);
@@ -239,7 +462,7 @@ bot.command('wallet', async (ctx) => {
   ]);
   await sendCard(ctx, text, actions);
 });
-bot.command('settings', async (ctx) => ctx.reply('Settings: gas presets, slippage, wallet.', inlineMenu));
+bot.command('settings', async (ctx) => sendCard(ctx, 'Settings', settingsKeyboard()));
 bot.command('help', async (ctx) => ctx.reply('Support: DM @your_support or open a ticket.', inlineMenu));
 
 bot.launch().then(() => {
@@ -250,5 +473,4 @@ process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
 // Ensure long polling is used (clear any old webhooks)
 bot.telegram.deleteWebhook({ drop_pending_updates: false }).catch(() => {});
-
 
