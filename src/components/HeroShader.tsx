@@ -45,43 +45,45 @@ export function HeroShader() {
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const canvasEl = canvasRef.current;
+    if (!canvasEl) return;
+    const canvas = canvasEl; // Non-null canvas for inner closures
     const gl = canvas.getContext("webgl", { antialias: false, depth: false, stencil: false });
     if (!gl) return;
+    const ctx = gl; // Non-null WebGL context for inner closures
 
     // Compile helpers
     function compile(type: number, src: string) {
-      const s = gl.createShader(type)!; gl.shaderSource(s, src); gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        console.warn(gl.getShaderInfoLog(s));
+      const s = ctx.createShader(type)!; ctx.shaderSource(s, src); ctx.compileShader(s);
+      if (!ctx.getShaderParameter(s, ctx.COMPILE_STATUS)) {
+        console.warn(ctx.getShaderInfoLog(s));
       }
       return s;
     }
-    const vs = compile(gl.VERTEX_SHADER, vert);
-    const fs = compile(gl.FRAGMENT_SHADER, frag);
-    const prog = gl.createProgram()!; gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
-    gl.useProgram(prog);
+    const vs = compile(ctx.VERTEX_SHADER, vert);
+    const fs = compile(ctx.FRAGMENT_SHADER, frag);
+    const prog = ctx.createProgram()!; ctx.attachShader(prog, vs); ctx.attachShader(prog, fs); ctx.linkProgram(prog);
+    ctx.useProgram(prog);
 
     // Fullscreen quad
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    const buf = ctx.createBuffer(); ctx.bindBuffer(ctx.ARRAY_BUFFER, buf);
+    ctx.bufferData(ctx.ARRAY_BUFFER, new Float32Array([
       -1,-1, 1,-1, -1,1,  -1,1, 1,-1, 1,1
-    ]), gl.STATIC_DRAW);
-    const posLoc = gl.getAttribLocation(prog, "position");
-    gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+    ]), ctx.STATIC_DRAW);
+    const posLoc = ctx.getAttribLocation(prog, "position");
+    ctx.enableVertexAttribArray(posLoc); ctx.vertexAttribPointer(posLoc, 2, ctx.FLOAT, false, 0, 0);
 
-    const uRes = gl.getUniformLocation(prog, "u_res");
-    const uTime = gl.getUniformLocation(prog, "u_time");
-    const uMouse = gl.getUniformLocation(prog, "u_mouse");
+    const uRes = ctx.getUniformLocation(prog, "u_res");
+    const uTime = ctx.getUniformLocation(prog, "u_time");
+    const uMouse = ctx.getUniformLocation(prog, "u_mouse");
 
-    let raf = 0; let start = performance.now();
+    let raf = 0; const start = performance.now();
     function resize(){
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = canvas.clientWidth * dpr;
       const h = canvas.clientHeight * dpr;
       if (canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
-      gl.viewport(0,0,canvas.width, canvas.height);
+      ctx.viewport(0,0,canvas.width, canvas.height);
     }
     const onMouse = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -99,10 +101,10 @@ export function HeroShader() {
       raf = requestAnimationFrame(frame);
       resize();
       const t = (performance.now() - start) / 1000;
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, t);
-      gl.uniform2f(uMouse, mouseRef.current.x, 1.0 - mouseRef.current.y);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      ctx.uniform2f(uRes, canvas.width, canvas.height);
+      ctx.uniform1f(uTime, t);
+      ctx.uniform2f(uMouse, mouseRef.current.x, 1.0 - mouseRef.current.y);
+      ctx.drawArrays(ctx.TRIANGLES, 0, 6);
     }
     frame();
 
