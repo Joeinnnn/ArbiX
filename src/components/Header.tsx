@@ -38,6 +38,13 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <Link
+            href="https://discord.gg/U6zH6KRRYb"
+            target="_blank"
+            className="inline-flex items-center justify-center h-9 px-4 rounded-md border border-white/15 text-sm font-medium hover:bg-white/10 border-neon"
+          >
+            Join Discord
+          </Link>
+          <Link
             href="https://t.me/ArbiXSolanabot"
             target="_blank"
             className="inline-flex items-center justify-center h-9 px-4 rounded-md bg-brand text-black text-sm font-medium hover:opacity-90 glow-brand border-neon border-neon-animated border-neon-glow"
